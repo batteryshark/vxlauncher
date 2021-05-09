@@ -6,7 +6,7 @@ from pathlib import Path
 import hashlib
 import atexit
 from .vxappconfig import VXAppConfig
-from smoothie.__main__ import create_smoothie, destroy_smoothie
+from smoothie import create_smoothie, destroy_smoothie
 from smoothie.mapmanager import resolve_map_path
 
 TMP_ROOT = Path("/vxtmp").resolve()

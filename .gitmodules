@@ -1,0 +1,3 @@
+[submodule "smoothie"]
+	path = smoothie
+	url = https://github.com/batteryshark/smoothie.git
