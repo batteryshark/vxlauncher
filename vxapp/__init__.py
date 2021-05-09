@@ -43,7 +43,7 @@ def determine_target_arch(path_to_executable):
 class VXApp:
     def __init__(self, path_to_vxapp,selected_config="default", no_launch=False):
         self.valid = False
-        self.config = VXAppConfig(os.path.join(path_to_vxapp,"info.json"),selected_config)
+        self.config = VXAppConfig(os.path.join(path_to_vxapp,"vxapp.info"),selected_config)
         self.vxapp_name = os.path.splitext(os.path.basename(path_to_vxapp))[0]
         self.id = self.generate_app_id(self.vxapp_name)
         self.tmp_path = TMP_ROOT.joinpath(self.id)
@@ -91,6 +91,18 @@ class VXApp:
         return None
 
     def launch_process(self):
+        print(f"Launching App as ID: {self.id}")
+        map_root = os.path.join(self.tmp_path,"map")        
+        # Get EXE Path and Architecture First
+        exe_vpath = self.config.selected_configuration['executable']
+        resolved_exe_path = resolve_map_path(map_root,exe_vpath)
+        if not os.path.exists(resolved_exe_path):
+            print(f"Executable Path Cannot be Found: {exe_vpath}")
+            return False
+        resolved_exe_path = str(resolved_exe_path)
+        # Determine Architecture
+        exe_arch = determine_target_arch(resolved_exe_path)
+
         # Set up Any Envars Needed
         envars = self.config.selected_configuration.get("envar",{})
         if envars:
@@ -99,8 +111,9 @@ class VXApp:
         # Set up Required Envars
         os.environ['PDXPROC'] = str(Path(BIN_ROOT).resolve())
 
-        # Base List of Plugins
-        preload_names = self.config.selected_configuration.get("preload",[])
+        # Base List of Plugins - Always load pdxfs.
+        preload_names = [f"pdxfs{exe_arch}.{EXT_LIB}"]
+        preload_names.extend(self.config.selected_configuration.get("preload",[]))
         preload_paths = []
         for preload_name in preload_names:
             preload_path = self.resolve_preload_path(preload_name)
@@ -109,7 +122,7 @@ class VXApp:
                 return False
             preload_paths.append(preload_path)
 
-        map_root = os.path.join(self.tmp_path,"map")
+        print(preload_paths)
         os.environ['PDXPL'] = ";".join(preload_paths)
         os.environ['PDXFS_ROOT'] = map_root
         os.environ['PDXFS_MODE'] = "1"
@@ -119,13 +132,11 @@ class VXApp:
             str(BIN_ROOT)
         ])
 
-        exe_vpath = self.config.selected_configuration['executable']
+
+
         exe_args = self.config.selected_configuration.get('args',"")
         exe_vcwd = self.config.selected_configuration.get('cwd',"")
-        resolved_exe_path = resolve_map_path(map_root,exe_vpath)
-        if not os.path.exists(resolved_exe_path):
-            print(f"Executable Path Cannot be Found: {exe_vpath}")
-            return False
+        
         resolved_cwd = None
         if exe_vcwd:
             resolved_cwd = resolve_map_path(map_root,exe_vcwd)
@@ -133,10 +144,7 @@ class VXApp:
                 print(f"Executable CWD Cannot be Found: {exe_vcwd}")
                 return False
 
-        resolved_exe_path = str(resolved_exe_path)
 
-        # Determine Architecture
-        exe_arch = determine_target_arch(resolved_exe_path)
         dropkick_path = str(BIN_ROOT.joinpath(f"dropkick{exe_arch}.{EXT_EXE}").resolve())
         pdxproc_path = str(BIN_ROOT.joinpath(f"pdxproc{exe_arch}.{EXT_LIB}").resolve())
         if not os.path.exists(dropkick_path):
@@ -149,10 +157,12 @@ class VXApp:
 
         if platform.system() == "Windows":
             if not resolved_cwd:
-                os.system(f"{dropkick_path} start {pdxproc_path} {resolved_exe_path} {exe_args}")
+                cmd = f"{dropkick_path} start {pdxproc_path} {resolved_exe_path} {exe_args}"
             else:
-                os.system(f"{dropkick_path} start_in {pdxproc_path} {resolved_exe_path} {resolved_cwd} {exe_args}")
+                cmd = f"{dropkick_path} start_in {pdxproc_path} {resolved_exe_path} {resolved_cwd} {exe_args}"
         else:
-            os.system(f"LD_PRELOAD={pdxproc_path} {resolved_exe_path} {exe_args}")
-
+            cmd = f"LD_PRELOAD={pdxproc_path} {resolved_exe_path} {exe_args}"
+        
+        print(f"Executing: {cmd}")
+        os.system(cmd)
         return True
