@@ -127,7 +127,6 @@ class VXApp:
         os.environ['PDXFS_ROOT'] = map_root
         os.environ['PDXFS_MODE'] = "1"
         os.environ['PDXFS_IGNORE'] = ";".join([
-            str(TMP_ROOT),
             str(SAVE_ROOT),
             str(BIN_ROOT)
         ])
@@ -157,11 +156,11 @@ class VXApp:
 
         if platform.system() == "Windows":
             if not resolved_cwd:
-                cmd = f"{dropkick_path} start {pdxproc_path} {resolved_exe_path} {exe_args}"
+                cmd = f"{dropkick_path} start {pdxproc_path} \"{resolved_exe_path}\" {exe_args}"
             else:
-                cmd = f"{dropkick_path} start_in {pdxproc_path} {resolved_exe_path} {resolved_cwd} {exe_args}"
+                cmd = f"{dropkick_path} start_in {pdxproc_path} \"{resolved_exe_path}\" \"{resolved_cwd}\" {exe_args}"
         else:
-            cmd = f"LD_PRELOAD={pdxproc_path} {resolved_exe_path} {exe_args}"
+            cmd = f"LD_PRELOAD={pdxproc_path} \"{resolved_exe_path}\" {exe_args}"
         
         print(f"Executing: {cmd}")
         os.system(cmd)
