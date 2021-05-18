@@ -128,7 +128,13 @@ class VXApp:
         os.environ['PDXFS_MODE'] = "1"
         os.environ['PDXFS_IGNORE'] = ";".join([
             str(SAVE_ROOT),
-            str(BIN_ROOT)
+            str(BIN_ROOT),
+            # We're gonna let shaders do their thing 
+            # TODO: Make this configurable
+            "C:\\ProgramData\\Intel",
+            "C:\\ProgramData\\Nvidia Corporation",
+            "C:\\Users\\USER\\AppData\\Local\\nvidia\\glcache",
+            "C:\\Users\\USER\\AppData\\Local\\d3dscache"
         ])
 
 
