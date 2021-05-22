@@ -5,6 +5,7 @@ import shutil
 from pathlib import Path
 import hashlib
 import atexit
+import struct
 from .vxappconfig import VXAppConfig
 from smoothie import create_smoothie, destroy_smoothie
 from smoothie.mapmanager import resolve_map_path
@@ -32,7 +33,14 @@ def determine_target_arch(path_to_executable):
         if b"\x50\x45\x00\x00\x64" in data:
             return "64"
         elif b"\x50\x45\x00\x00\x4C" in data:
-            return "32"
+            # This could be 32 or 64bit still via 32bit Word Machine...
+            peh_offset = data.find( b"\x50\x45\x00\x00\x4C")
+            bcharacteristics = data[peh_offset+0x16:peh_offset+0x18]
+            characteristics = struct.unpack("<H",bcharacteristics)[0]
+            if characteristics & 0x100:
+                return "32"
+            return "64"
+
         elif data[0x12] == b"\x03":
             return "32"
         elif data[0x12] == b"\x3E":
