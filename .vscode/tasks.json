@@ -1,0 +1,104 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        // -- [COMMON TASKS] -- 
+        {
+            "label": "Create Binary Path",
+            "type": "shell",
+            "osx": {
+                "command": "mkdir -p ./bin"
+            },
+            "linux": {
+                "command": "mkdir -p ./bin"
+            },
+            "windows": {
+                "command": "cmd",
+                "args": [
+                    "/C",
+                    "if not exist .\\bin mkdir .\\bin"
+                ]
+            }
+        },
+        {
+            "label": "Build Binaries [Windows 64-bit]",
+            "dependsOn": [
+                "Create Binary Path",
+                "VXLauncher [Windows 64-bit]"
+            ],
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            },
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },    
+        {
+            "label": "Build Binaries [Linux 64-bit]",
+            "dependsOn": [
+                "Create Binary Path",
+                "VXLauncher [Linux 64-bit]"               
+            ],
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            },
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },           
+        {
+            "label": "VXLauncher [Windows 64-bit]",
+            "type": "shell",
+            "command": [
+                "x86_64-w64-mingw32-g++",
+                "--std",
+                "c++17",               
+                "-fshort-wchar",  
+                "${workspaceFolder}/src/utils.cpp",
+                "${workspaceFolder}/src/vxapp.cpp",                
+                "${workspaceFolder}/src/vxlauncher.cpp",
+                "-static",
+                "-static-libgcc",
+                "-static-libstdc++",
+                "-lgcc",
+                "-o ${workspaceFolder}/bin/vxlauncher.exe"
+            ],
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            },
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "VXLauncher [Linux 64-bit]",
+            "type": "shell",
+            "command": [
+                "g++",
+                "--std",
+                "c++17",               
+                "${workspaceFolder}/src/utils.cpp",
+                "${workspaceFolder}/src/vxapp.cpp",                
+                "${workspaceFolder}/src/vxlauncher.cpp",
+                "-static",
+                "-static-libgcc",
+                "-static-libstdc++",
+                "-lgcc",
+                "-o ${workspaceFolder}/bin/vxlauncher.elf"
+            ],
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            },
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },        
+    ]
+}
