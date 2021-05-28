@@ -1,2 +1,2 @@
 # vxlauncher
-A Launcher for the "vxapp" format.
+A Launcher for the "vxapp" format - uses the native "libsmoothie" library.
