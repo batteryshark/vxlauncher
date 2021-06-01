@@ -55,10 +55,7 @@
             "command": [
                 "x86_64-w64-mingw32-g++",
                 "--std",
-                "c++17",               
-                "-fshort-wchar",  
-                "${workspaceFolder}/src/utils.cpp",
-                "${workspaceFolder}/src/vxapp.cpp",                
+                "c++17",                     
                 "${workspaceFolder}/src/vxlauncher.cpp",
                 "-static",
                 "-static-libgcc",
@@ -81,9 +78,7 @@
             "command": [
                 "g++",
                 "--std",
-                "c++17",               
-                "${workspaceFolder}/src/utils.cpp",
-                "${workspaceFolder}/src/vxapp.cpp",                
+                "c++17",                      
                 "${workspaceFolder}/src/vxlauncher.cpp",
                 "-static",
                 "-static-libgcc",
