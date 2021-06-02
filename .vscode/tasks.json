@@ -23,7 +23,7 @@
         {
             "label": "**Create Release [Windows]**",
             "type": "shell",
-            "command": "python3 rlsgen.py vxlauncher_windows vxlauncher.exe libsmoothie.dll",
+            "command": "python3 tools/rlsgen.py vxlauncher_windows vxlauncher.exe libsmoothie.dll",
             "group": {
                 "kind": "build",
                 "isDefault": true
@@ -32,7 +32,7 @@
         {
             "label": "**Create Release [Linux]**",
             "type": "shell",
-            "command": "python3 rlsgen.py vxlauncher_linux vxlauncher.elf libsmoothie.so",
+            "command": "python3 tools/rlsgen.py vxlauncher_linux vxlauncher.elf libsmoothie.so",
             "group": {
                 "kind": "build",
                 "isDefault": true
