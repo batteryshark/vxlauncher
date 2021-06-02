@@ -3,62 +3,51 @@
     "tasks": [
         // -- [COMMON TASKS] -- 
         {
-            "label": "Create Binary Path",
+            "label": "**Generate Build Path**",
             "type": "shell",
-            "osx": {
-                "command": "mkdir -p ./bin"
-            },
-            "linux": {
-                "command": "mkdir -p ./bin"
-            },
-            "windows": {
-                "command": "cmd",
-                "args": [
-                    "/C",
-                    "if not exist .\\bin mkdir .\\bin"
-                ]
-            }
+            "osx": {"command": "mkdir -p ./bin"},
+            "linux": {"command": "mkdir -p ./bin"},
+            "windows": {"command": "cmd /C if not exist bin mkdir bin"}
         },
         {
-            "label": "Build Binaries [Windows 64-bit]",
-            "dependsOn": [
-                "Create Binary Path",
-                "VXLauncher [Windows 64-bit]"
-            ],
-            "presentation": {
-                "reveal": "always",
-                "panel": "shared"
-            },
-            "group": {
-                "kind": "build",
-                "isDefault": true
-            }
-        },    
-        {
-            "label": "Build Binaries [Linux 64-bit]",
-            "dependsOn": [
-                "Create Binary Path",
-                "VXLauncher [Linux 64-bit]"               
-            ],
-            "presentation": {
-                "reveal": "always",
-                "panel": "shared"
-            },
-            "group": {
-                "kind": "build",
-                "isDefault": true
-            }
-        },           
-        {
-            "label": "VXLauncher [Windows 64-bit]",
+            "label": "**Clean Build Path**",
             "type": "shell",
+            "osx": {"command": "rm -rf ./bin"},
+            "linux": {"command": "rm -rf ./bin"},
+            "windows": {"command": "cmd /C if exist bin rmdir /s /q bin"},            
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },            
+        },
+        {
+            "label": "**Create Release [Windows]**",
+            "type": "shell",
+            "command": "python3 rlsgen.py vxlauncher_windows vxlauncher.exe libsmoothie.dll",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+        },  
+        {
+            "label": "**Create Release [Linux]**",
+            "type": "shell",
+            "command": "python3 rlsgen.py vxlauncher_linux vxlauncher.elf libsmoothie.so",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+        },       
+        {
+            "label": "Build VXLauncher [Windows 64-bit]",
+            "type": "shell",
+            "dependsOn": ["**Generate Build Path**"],
             "command": [
                 "x86_64-w64-mingw32-g++",
                 "--std",
                 "c++17",                     
                 "${workspaceFolder}/src/vxlauncher.cpp",
                 "-static",
-                "-static-libgcc",
                 "-static-libstdc++",
                 "-lgcc",
                 "-o ${workspaceFolder}/bin/vxlauncher.exe"
@@ -73,17 +62,16 @@
             }
         },
         {
-            "label": "VXLauncher [Linux 64-bit]",
+            "label": "Build VXLauncher [Linux 64-bit]",
             "type": "shell",
+            "dependsOn": ["**Generate Build Path**"],            
             "command": [
                 "g++",
                 "--std",
                 "c++17",                      
                 "${workspaceFolder}/src/vxlauncher.cpp",
-                "-static",
-                "-static-libgcc",
                 "-static-libstdc++",
-                "-lgcc",
+				"-ldl",
                 "-o ${workspaceFolder}/bin/vxlauncher.elf"
             ],
             "presentation": {
