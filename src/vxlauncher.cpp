@@ -22,13 +22,9 @@ static tsmoothie_resolve* smoothie_resolve;
 #if _WIN32
 #include <libloaderapi.h>
 #define LIBSMOOTHIE "libsmoothie.dll"
-#define EXT_LIB "dll"
-#define EXT_EXEC "exe"
 #else
 #include <dlfcn.h>
 #define LIBSMOOTHIE "libsmoothie.so"
-#define EXT_LIB "so"
-#define EXT_EXEC "elf"
 #endif
 
 std::filesystem::path BIN_PATH;
@@ -45,7 +41,7 @@ std::string dropkick_64;
 
 
 #if _WIN32
-#include <Shlobj.h>
+#include <shlobj.h>
 int is_elevated(){
     return IsUserAnAdmin();
 }
@@ -172,11 +168,11 @@ int resolve_smoothie(){
     smoothie_destroy = (tsmoothie_destroy*)GetProcAddress(hSmoothie,"smoothie_destroy");
     smoothie_resolve = (tsmoothie_resolve*)GetProcAddress(hSmoothie,"smoothie_resolve");
     #else
-    void* hSmoothie = dlopen(LIBSMOOTHIE,RLTD_NOW);
+    void* hSmoothie = dlopen(LIBSMOOTHIE,RTLD_NOW);
     if(!hSmoothie){return 0;}
-    smoothie_create = dlsym(hSmoothie,"smoothie_create");
-    smoothie_destroy = dlsym(hSmoothie,"smoothie_destroy");
-    smoothie_resolve = dlsym(hSmoothie,"smoothie_resolve");
+    smoothie_create = (tsmoothie_create*)dlsym(hSmoothie,"smoothie_create");
+    smoothie_destroy = (tsmoothie_destroy*)dlsym(hSmoothie,"smoothie_destroy");
+    smoothie_resolve = (tsmoothie_resolve*)dlsym(hSmoothie,"smoothie_resolve");
     #endif
     if(!smoothie_create || !smoothie_destroy || !smoothie_resolve){return 0;}
     return 1;
@@ -327,12 +323,12 @@ int load_vxapp(std::filesystem::path& vxapp_path, std::string& config_name, int 
 
     // Add App Envars 
     for(auto envar: selected_config->envar){
-        putenv(envar.c_str());
+        putenv((char*)envar.c_str());
     }   
 
     // Add PDXProc Envars
     std::string pdxproc_env = std::string("PDXPROC=") + BIN_PATH.string();
-    putenv(pdxproc_env.c_str());
+    putenv((char*)pdxproc_env.c_str());
     std::string pdxproc_preloads;
     // Always add PDXFS
     std::filesystem::path pdxfs64_lib = resolve_preload_path(local_plugins_path,pdxfs64);
@@ -347,14 +343,14 @@ int load_vxapp(std::filesystem::path& vxapp_path, std::string& config_name, int 
     }  
     std::string pdxpl = "PDXPL=";
     pdxpl.append(pdxproc_preloads);
-    putenv(pdxpl.c_str());
+    putenv((char*)pdxpl.c_str());
 
 
     // Add PDXFS Envars
     std::filesystem::path map_root = tmp_path / std::string("map");
     std::string pdxfs_root = std::string("PDXFS_ROOT=") + map_root.string();
-    putenv(pdxfs_root.c_str());    
-    putenv("PDXFS_MODE=1"); 
+    putenv((char*)pdxfs_root.c_str());    
+    putenv((char*)"PDXFS_MODE=1"); 
     std::string pdxfs_ignore = "PDXFS_IGNORE=";
     pdxfs_ignore.append(SAVE_ROOT.string().c_str());
     pdxfs_ignore.append(";");
@@ -365,7 +361,7 @@ int load_vxapp(std::filesystem::path& vxapp_path, std::string& config_name, int 
     // We're Gonna get rid of some shaders as well...
     // TODO: Make this Configurable
     pdxfs_ignore.append("C:\\ProgramData\\Intel;C:\\ProgramData\\Nvidia Corporation;C:\\Users\\USER\\AppData\\Local\\nvidia\\glcache;C:\\Users\\USER\\AppData\\Local\\d3dscache");
-    putenv(pdxfs_ignore.c_str()); 
+    putenv((char*)pdxfs_ignore.c_str()); 
 
     // Resolve Dropkick + PDXProc Path
     std::string dropkick_name = (arch == 64) ? dropkick_64:dropkick_32;
