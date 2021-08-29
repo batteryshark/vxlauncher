@@ -45,12 +45,36 @@
             "command": [
                 "x86_64-w64-mingw32-g++",
                 "--std",
-                "c++17",                     
+                "c++17",
                 "${workspaceFolder}/src/vxlauncher.cpp",
                 "-static",
                 "-static-libstdc++",
                 "-lgcc",
                 "-o ${workspaceFolder}/bin/vxlauncher.exe"
+            ],
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            },
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "Build VXLauncher Silent [Windows 64-bit]",
+            "type": "shell",
+            "dependsOn": ["**Generate Build Path**"],
+            "command": [
+                "x86_64-w64-mingw32-g++",
+                "--std",
+                "c++17",
+                "-mwindows",                     
+                "${workspaceFolder}/src/vxlauncher.cpp",
+                "-static",
+                "-static-libstdc++",
+                "-lgcc",
+                "-o ${workspaceFolder}/bin/vxlauncher_frontend.exe"
             ],
             "presentation": {
                 "reveal": "always",
