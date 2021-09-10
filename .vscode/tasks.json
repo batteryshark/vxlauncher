@@ -23,7 +23,7 @@
         {
             "label": "**Create Release [Windows]**",
             "type": "shell",
-            "command": "python3 tools/rlsgen.py vxlauncher_windows vxlauncher.exe vxbootstrap32.exe vxbootstrap64.exe",
+            "command": "python3 tools/rlsgen.py vxlauncher_windows vxlauncher.exe",
             "group": {
                 "kind": "build",
                 "isDefault": true
@@ -84,52 +84,6 @@
                 "kind": "build",
                 "isDefault": true
             }
-        },
-    {
-        "label": "Build VXBootstrap [Windows 64-bit]",
-        "dependsOn": ["**Generate Build Path**"],
-        "type": "shell",
-        "command": [
-            "x86_64-w64-mingw32-gcc",
-            "-fshort-wchar",
-            "-mwindows", 
-            "${workspaceFolder}/src/vxbootstrap.cpp",
-            "-static",
-            "-static-libgcc",
-            "-lstdc++",
-            "-o ${workspaceFolder}/bin/VXBootstrap64.exe"
-        ],
-        "presentation": {
-            "reveal": "always",
-            "panel": "shared"
-        },
-        "group": {
-            "kind": "build",
-            "isDefault": true
         }
-    },
-    {
-        "label": "Build VXBootstrap [Windows 32-bit]",
-        "dependsOn": ["**Generate Build Path**"],
-        "type": "shell",
-        "command": [
-            "i686-w64-mingw32-gcc",
-            "-fshort-wchar",
-            "-mwindows", 
-            "${workspaceFolder}/src/vxbootstrap.cpp",
-            "-static",
-            "-static-libgcc",
-            "-lstdc++",
-            "-o ${workspaceFolder}/bin/VXBootstrap32.exe"
-        ],
-        "presentation": {
-            "reveal": "always",
-            "panel": "shared"
-        },
-        "group": {
-            "kind": "build",
-            "isDefault": true
-        }
-    },        
     ]
 }
