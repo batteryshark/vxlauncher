@@ -7,6 +7,7 @@
 
 #include "sha1.hpp"
 #include "json.hpp"
+#include "strutils.hpp"
 
 
 
@@ -30,12 +31,9 @@ static tsmoothie_resolve* smoothie_resolve;
 std::filesystem::path BIN_PATH;
 std::filesystem::path TMP_ROOT;
 std::filesystem::path SAVE_ROOT;
-std::string pdxfs64;
-std::string pdxfs32;
-std::string pdxproc64;
-std::string pdxproc32;
-std::string dropkick_32;
-std::string dropkick_64;
+
+std::string vxbs_32;
+std::string vxbs_64;
 
 
 
@@ -137,12 +135,8 @@ int determine_target_arch(const char* path_to_executable){
 
 void init_paths(){
     #if _WIN32
-    dropkick_32 = "dropkick32.exe";
-    dropkick_64 = "dropkick64.exe";
-    pdxfs64 = "pdxfs64.dll";
-    pdxfs32 = "pdxfs32.dll";
-    pdxproc64 = "pdxproc64.dll";
-    pdxproc32 = "pdxproc32.dll";
+    vxbs_32 = "VXBootstrap32.exe";
+    vxbs_64 = "VXBootstrap64.exe";
     if(getenv("VXPATH_BIN")){
         BIN_PATH = getenv("VXPATH_BIN");
     }else{
@@ -174,8 +168,13 @@ void init_paths(){
 
 int resolve_smoothie(){
     #if _WIN32
+    
     HMODULE hSmoothie = LoadLibraryA(LIBSMOOTHIE);
-    if(!hSmoothie){return 0;}
+    if(!hSmoothie){
+        std::filesystem::path libsmoothie_path = BIN_PATH / LIBSMOOTHIE;
+        hSmoothie = LoadLibraryA(libsmoothie_path.string().c_str());
+        if(!hSmoothie){return 0;}
+    }
     smoothie_create = (tsmoothie_create*)GetProcAddress(hSmoothie,"smoothie_create");
     smoothie_destroy = (tsmoothie_destroy*)GetProcAddress(hSmoothie,"smoothie_destroy");
     smoothie_resolve = (tsmoothie_resolve*)GetProcAddress(hSmoothie,"smoothie_resolve");
@@ -190,12 +189,29 @@ int resolve_smoothie(){
     return 1;
 }
 
-
 std::filesystem::path resolve_preload_path(std::filesystem::path& local_plugin_path, std::string& preload_name){
     std::filesystem::path local_path = local_plugin_path / preload_name;
     std::filesystem::path global_path = BIN_PATH / preload_name;
-    if(std::filesystem::exists(local_path)){return local_path;}
-    if(std::filesystem::exists(global_path)){return global_path;}
+    if(ends_with(preload_name,".dlldynamic")){
+        std::string local_32 = local_path.string();
+        std::string local_64 = local_path.string();
+        std::string global_32 = global_path.string();
+        std::string global_64 = global_path.string();
+        replace(local_32,".dlldynamic","32.dll");
+        replace(local_64,".dlldynamic","64.dll");
+        replace(global_32,".dlldynamic","32.dll");
+        replace(global_64,".dlldynamic","64.dll");
+
+        if(std::filesystem::exists(local_32)){return local_path;}
+        if(std::filesystem::exists(global_32)){return global_path;}
+        if(std::filesystem::exists(local_64)){return local_path;}
+        if(std::filesystem::exists(global_64)){return global_path;}
+
+    }else{
+        if(std::filesystem::exists(local_path)){return local_path;}
+        if(std::filesystem::exists(global_path)){return global_path;}
+    }
+
     std::filesystem::path no_path = "";
     return no_path;
 }
@@ -237,7 +253,8 @@ int load_configuration(std::string path_to_config, ConfigInfo* selected_config){
 
     for(auto config: j){
         std::string curname = config["name"];
-        if(!curname.compare(selected_config->name)){
+        if(!curname.compare(selected_config->name) || selected_config->name.empty()){
+            selected_config->name = config["name"];
             selected_config->map = config["map"];
             selected_config->executable = config["executable"];
             selected_config->args = config["args"];
@@ -270,7 +287,7 @@ int unload_vxapp(std::filesystem::path& vxapp_path){
     return status;
 }
 
-int load_vxapp(std::filesystem::path& vxapp_path, std::string& config_name, int no_launch, int frontend){
+int load_vxapp(std::filesystem::path& vxapp_path, std::string& config_name, int no_launch){
     // Initalize Configuration Paths    
     init_paths();
     std::filesystem::path config_path = vxapp_path / std::string("vxapp.config");
@@ -290,14 +307,14 @@ int load_vxapp(std::filesystem::path& vxapp_path, std::string& config_name, int 
     // Pull our config data with the selected configuration.
     ConfigInfo* selected_config = new ConfigInfo();
     selected_config->name = config_name;
-    if(!load_configuration(config_path.string(),selected_config)){return 0;}
 
+    if(!load_configuration(config_path.string(),selected_config)){return 0;}
+ 
 
     // Set up Smoothie Instance
     std::filesystem::create_directories(tmp_path);
     std::filesystem::create_directories(save_path);
     std::filesystem::path mapinfo_path = content_path / selected_config->map;
-
     if(!smoothie_create(mapinfo_path.string().c_str(),tmp_path.string().c_str(),save_path.string().c_str())){
         printf("[VXLauncher] Smoothie Create Failed.\n");
         std::filesystem::remove_all(tmp_path);
@@ -336,20 +353,17 @@ int load_vxapp(std::filesystem::path& vxapp_path, std::string& config_name, int 
     // Add PDXProc Envars
     std::string pdxproc_env = std::string("PDXPROC=") + BIN_PATH.string();
     putenv((char*)pdxproc_env.c_str());
-    std::string pdxproc_preloads;
-    // Always add PDXFS
-    std::filesystem::path pdxfs64_lib = resolve_preload_path(local_plugins_path,pdxfs64);
-    std::filesystem::path pdxfs32_lib = resolve_preload_path(local_plugins_path,pdxfs32);
-    pdxproc_preloads = pdxfs64_lib.string() + std::string(";") + pdxfs32_lib.string();
-    
-    // Add the rest from our config.
+    std::string pdx_preloads;
+    std::vector<std::string> preloads;
+
+    // Add the preloads from our config.
     for(auto preload: selected_config->preload){
         std::filesystem::path cpath = resolve_preload_path(local_plugins_path,preload);
-        pdxproc_preloads.append(";");
-        pdxproc_preloads.append(cpath.string());
+        preloads.push_back(cpath.string());
     }  
+    pdx_preloads = implode(preloads,';');
     std::string pdxpl = "PDXPL=";
-    pdxpl.append(pdxproc_preloads);
+    pdxpl.append(pdx_preloads);
     putenv((char*)pdxpl.c_str());
 
 
@@ -371,23 +385,19 @@ int load_vxapp(std::filesystem::path& vxapp_path, std::string& config_name, int 
     putenv((char*)pdxfs_ignore.c_str()); 
 
     // Resolve Dropkick + PDXProc Path
-    std::string dropkick_name = (arch == 64) ? dropkick_64:dropkick_32;
-    std::string pdxproc_name =  (arch == 64) ? pdxproc64:pdxproc32;
-    std::filesystem::path dropkick_path = resolve_preload_path(local_plugins_path,dropkick_name);
-    std::filesystem::path pdxproc_path = resolve_preload_path(local_plugins_path,pdxproc_name);
+    std::string vxbootstrap_name = (arch == 64) ? vxbs_64:vxbs_32;
+    std::filesystem::path vxbootstrap_path = resolve_preload_path(local_plugins_path,vxbootstrap_name);
+    if(vxbootstrap_path.empty()){
+        vxbootstrap_path = std::filesystem::absolute(vxbootstrap_name);
+    }
     
     std::string cmd;
     #if _WIN32
-    if(selected_config->cwd.empty()){
-        if(frontend){
-    cmd = dropkick_path.string() + std::string(" start \"") + pdxproc_path.string() + std::string("\" \"") + exe_path.string() + std::string("\" ") + selected_config->args;
-        }else{
-    cmd = dropkick_path.string() + std::string(" start \"") + pdxproc_path.string() + std::string("\" \"") + exe_path.string() + std::string("\" ") + selected_config->args;   
-        }
-    
-    }else{
-            char* cwd_cpath = (char*)calloc(1,32768);
-            if(!smoothie_resolve(tmp_path.string().c_str(), selected_config->cwd.c_str(), exe_cpath)){
+
+    cmd = vxbootstrap_path.string() + std::string(" vxcmd=start ") + std::string(" vxexe=\""+exe_path.string()+"\" ") + std::string(" vxlibs=\""+pdx_preloads+"\" ");
+    if(!selected_config->cwd.empty()){
+        char* cwd_cpath = (char*)calloc(1,32768);
+        if(!smoothie_resolve(tmp_path.string().c_str(), selected_config->cwd.c_str(), exe_cpath)){
             printf("[VXLauncher] Error: Could not Resolve Target CWD\n");
             std::filesystem::remove_all(tmp_path);        
             free(cwd_cpath);
@@ -395,14 +405,10 @@ int load_vxapp(std::filesystem::path& vxapp_path, std::string& config_name, int 
         }
         std::filesystem::path resolved_cwd = cwd_cpath;
         free(cwd_cpath);
-        if(frontend){
-cmd = dropkick_path.string() + std::string(" start_in \"") + pdxproc_path.string() + std::string("\" \"") + exe_path.string() + std::string("\" \"") + resolved_cwd.string() + std::string("\" ") + selected_config->args;
-   
-        }else{
- cmd = dropkick_path.string() + std::string(" start_in \"") + pdxproc_path.string() + std::string("\" \"") + exe_path.string() + std::string("\" \"") + resolved_cwd.string() + std::string("\" ") + selected_config->args;
-        }
-     
+        cmd += std::string(" vxwd=\""+resolved_cwd.string()+"\" ");
     }
+    cmd += selected_config->args;
+
     #else
         cmd = std::string("LD_PRELOAD=") + pdxproc_path.string() + std::string(" \"") + exe_path.string() + std::string("\" ") + selected_config->args;
     #endif
@@ -414,13 +420,17 @@ cmd = dropkick_path.string() + std::string(" start_in \"") + pdxproc_path.string
 }
 
 void usage(const char* name){
-    printf("Usage: %s path_to_vxapp [config=config_name] [no_launch]\n",name);
+    
+    printf("Usage: %s \"Path/To/Dir.vxapp\" [cmd=STARTUP/CLEANUP] [config=\"OTHER CONFIG\"] [opt=NOLAUNCH]\n",name);
     exit(-1);
 }
 
 
 
 int main(int argc, const char*argv[]){
+	if(getenv("PDXDBG")){
+		AllocConsole();
+	}
     char backsplash_cmd[1024] = {0x00};
     if(!is_elevated()){
         printf("[VXLauncher] Error: This Application Must be Run with Administrative Privileges.\n");
@@ -428,40 +438,37 @@ int main(int argc, const char*argv[]){
     }
     if(argc < 2){usage(argv[0]);}
     int no_launch = 0;
-    int cleanup = 0;
-    int frontend = 0;
-    std::string config_id = "default";
+    std::string config_name = "";
     std::filesystem::path vxapp_path = argv[1];
-    // Pull optional params
+    std::string cmd = "STARTUP";
+
     if(argc > 2){
-        for(int i=2; i < argc; i++){
-            if(!strcmp(argv[i],"no_launch")){
+        for(int i = 2; i < argc; i++){
+            std::string cs = argv[i];
+            if(cs.rfind("config=", 0) != std::string::npos){
+                config_name = cs;
+                replace(config_name,std::string("config="),std::string(""));
+            }else if(cs.rfind("NOLAUNCH", 0) != std::string::npos){
                 no_launch = 1;
-            }
-            if(!strcmp(argv[i],"frontend")){
-                frontend = 1;
-            }
-            if(!strcmp(argv[i],"cleanup")){
-                unload_vxapp(vxapp_path);
-                return 0;
-            }
-            if(strstr(argv[i],"config=")){
-                config_id = strstr(argv[i],"config=") + strlen("config=");
+            }else if(cs.rfind("cmd=", 0) != std::string::npos){
+                cmd = cs;
+                replace(cmd,std::string("cmd="),std::string(""));
             }
         }
     }
-
-   // sprintf(backsplash_cmd,"backsplash.exe \"%s\"",argv[1]);
-  //  WinExec(backsplash_cmd,1);
     
-        
-    if(!load_vxapp(vxapp_path,config_id,no_launch,frontend)){
-        return -1;
+    if(cmd == "CLEANUP"){
+        return unload_vxapp(vxapp_path);
     }
-    if(!frontend){
+    
+    if(cmd == "STARTUP"){
+        if(!load_vxapp(vxapp_path,config_name,no_launch)){
+            return -1;
+        }
         printf("Press Any Key to Continue\n");  
         getchar();    
         unload_vxapp(vxapp_path);
     }
+
     return 0;
 }

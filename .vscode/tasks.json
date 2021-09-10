@@ -23,7 +23,7 @@
         {
             "label": "**Create Release [Windows]**",
             "type": "shell",
-            "command": "python3 tools/rlsgen.py vxlauncher_windows vxlauncher.exe libsmoothie.dll",
+            "command": "python3 tools/rlsgen.py vxlauncher_windows vxlauncher.exe vxbootstrap32.exe vxbootstrap64.exe",
             "group": {
                 "kind": "build",
                 "isDefault": true
@@ -46,35 +46,12 @@
                 "x86_64-w64-mingw32-g++",
                 "--std",
                 "c++17",
+                "-mwindows", 
                 "${workspaceFolder}/src/vxlauncher.cpp",
                 "-static",
                 "-static-libstdc++",
                 "-lgcc",
                 "-o ${workspaceFolder}/bin/vxlauncher.exe"
-            ],
-            "presentation": {
-                "reveal": "always",
-                "panel": "shared"
-            },
-            "group": {
-                "kind": "build",
-                "isDefault": true
-            }
-        },
-        {
-            "label": "Build VXLauncher Silent [Windows 64-bit]",
-            "type": "shell",
-            "dependsOn": ["**Generate Build Path**"],
-            "command": [
-                "x86_64-w64-mingw32-g++",
-                "--std",
-                "c++17",
-                "-mwindows",                     
-                "${workspaceFolder}/src/vxlauncher.cpp",
-                "-static",
-                "-static-libstdc++",
-                "-lgcc",
-                "-o ${workspaceFolder}/bin/vxlauncher_frontend.exe"
             ],
             "presentation": {
                 "reveal": "always",
@@ -92,7 +69,8 @@
             "command": [
                 "g++",
                 "--std",
-                "c++17",                      
+                "c++17",  
+                "-mwindows",                     
                 "${workspaceFolder}/src/vxlauncher.cpp",
                 "-static-libstdc++",
 				"-ldl",
@@ -106,6 +84,52 @@
                 "kind": "build",
                 "isDefault": true
             }
-        },        
+        },
+    {
+        "label": "Build VXBootstrap [Windows 64-bit]",
+        "dependsOn": ["**Generate Build Path**"],
+        "type": "shell",
+        "command": [
+            "x86_64-w64-mingw32-gcc",
+            "-fshort-wchar",
+            "-mwindows", 
+            "${workspaceFolder}/src/vxbootstrap.cpp",
+            "-static",
+            "-static-libgcc",
+            "-lstdc++",
+            "-o ${workspaceFolder}/bin/VXBootstrap64.exe"
+        ],
+        "presentation": {
+            "reveal": "always",
+            "panel": "shared"
+        },
+        "group": {
+            "kind": "build",
+            "isDefault": true
+        }
+    },
+    {
+        "label": "Build VXBootstrap [Windows 32-bit]",
+        "dependsOn": ["**Generate Build Path**"],
+        "type": "shell",
+        "command": [
+            "i686-w64-mingw32-gcc",
+            "-fshort-wchar",
+            "-mwindows", 
+            "${workspaceFolder}/src/vxbootstrap.cpp",
+            "-static",
+            "-static-libgcc",
+            "-lstdc++",
+            "-o ${workspaceFolder}/bin/VXBootstrap32.exe"
+        ],
+        "presentation": {
+            "reveal": "always",
+            "panel": "shared"
+        },
+        "group": {
+            "kind": "build",
+            "isDefault": true
+        }
+    },        
     ]
 }
